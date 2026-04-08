@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Python RPG</title>
+    <style>
+        body { background: #1a1a2e; color: #eee; font-family: monospace; padding: 20px; }
+        .panel { background: #16213e; border: 1px solid #0f3460; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        button { background: #e94560; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #c73652; }
+        #log { height: 200px; overflow-y: auto; background: #0a0a1a; padding: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1> Python RPG</h1>
+
+    <div class="panel">
+        <h2>Karakter Oluştur</h2>
+        <input id="charName" placeholder="İsim" />
+        <select id="charClass">
+            <option value="warrior">Savaşçı</option>
+            <option value="mage">Büyücü</option>
+            <option value="rogue">Haydut</option>
+        </select>
+        <button onclick="createCharacter()">Oluştur</button>
+    </div>
+
+    <div class="panel" id="gamePanel" style="display:none">
+        <h2 id="charInfo"></h2>
+        <button onclick="battle('goblin')">Goblin ile Savaş</button>
+        <button onclick="battle('orc')">Orc ile Savaş</button>
+        <button onclick="battle('skeleton')">İskelet ile Savaş</button>
+    </div>
+
+    <div class="panel">
+        <h3>Savaş Günlüğü</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const SESSION_ID = Math.random().toString(36).slice(2);
+
+        async function createCharacter() {
+            const name = document.getElementById("charName").value;
+            const cls = document.getElementById("charClass").value;
+
+            const res = await fetch("/api/character/create", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Session-ID": SESSION_ID,
+                },
+                body: JSON.stringify({ name, class: cls }),
+            });
+
+            const data = await res.json();
+            log(`✅ ${data.message}`);
+            document.getElementById("charInfo").textContent =
+                `${data.character.name} | Seviye ${data.character.level} | HP: ${data.character.hp}`;
+            document.getElementById("gamePanel").style.display = "block";
+        }
+
+        async function battle(enemy) {
+            const res = await fetch("/api/battle/start", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Session-ID": SESSION_ID,
+                },
+                body: JSON.stringify({ enemy }),
+            });
+
+            const data = await res.json();
+            data.log.forEach(line => log(line));
+
+            if (data.result === "win") {
+                log(`💰 Yeni durum: ${JSON.stringify(data.character)}`);
+            }
+        }
+
+        function log(text) {
+            const el = document.getElementById("log");
+            el.innerHTML += `<div>${text}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+    </script>
+</body>
+</html>
